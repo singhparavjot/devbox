@@ -1,0 +1,169 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "devBoxSku": {
+      "value": "general_i_8c32gb256ssd_v2"
+    },
+    "devBoxImage": {
+      "value": "microsoftvisualstudio_visualstudioplustools_vs-2022-ent-general-win11-m365-gen2"
+    },
+    "storageType": {
+      "value": "ssd_256gb"
+    },
+    "autoStopTime": {
+      "value": "19:00"
+    },
+    "maxDevBoxesPerUser": {
+      "value": 2
+    },
+    "localAdministrator": {
+      "value": "Enabled"
+    },
+    "stopOnDisconnect": {
+      "value": "Enabled"
+    },
+    "gracePeriodMinutes": {
+      "value": 60
+    },
+    "tags": {
+      "value": {
+        "environment": "prd",
+        "managedBy": "bicep"
+      }
+    },
+    "devCenters": {
+      "value": [
+        {
+          "name": "dvcenter-dbox-prd-ae-001",
+          "resourceGroup": "rg-devbox-prd-aus-001",
+          "location": "australiaeast",
+          "catalogPerProjectEnabled": true,
+          "createNetworkConnection": true,
+          "networkConnectionName": "network-connection-devbox-prd-ae-001",
+          "vnetName": "vnet-devbox-prd-aus-001",
+          "vnetResourceGroup": "rg-devbox-prd-aus-001",
+          "subnetName": "default",
+          "domainJoinType": "AzureADJoin",
+          "galleryName": "devbox_imagegallery",
+          "galleryResourceGroup": "rg-devbox-prd-a-001",
+          "projects": [
+            {
+              "name": "devproject-team-a-prd-ae-001",
+              "timeZone": "Australia/Sydney",
+              "tags": {
+                "team": "team-a",
+                "region": "australia"
+              },
+              "pools": [
+                {
+                  "poolName": "pool-standard",
+                  "displayName": "CORE-Dev-Large-v1",
+                  "localAdministrator": "Disabled",
+                  "stopOnDisconnect": "Enabled",
+                  "gracePeriodMinutes": 120,
+                  "devBoxSku": "general_i_32c128gb512ssd_v2",
+                  "autoStopTime": "19:00",
+                  "storageType": "ssd_512gb",
+                  "galleryImageName": "win11-custom"
+                }
+              ]
+            },
+            {
+              "name": "devproject-team-b-prd-ae-001",
+              "maxDevBoxesPerUser": 3,
+              "timeZone": "Australia/Sydney",
+              "tags": {
+                "team": "team-b",
+                "region": "australia"
+              },
+              "pools": [
+                {
+                  "poolName": "pool-power-user",
+                  "displayName": "CORE-Dev-Small-v1",
+                  "devBoxSku": "general_i_8c32gb256ssd_v2",
+                  "storageType": "ssd_256gb",
+                  "autoStopTime": "19:00",
+                  "galleryImageName": "win11-custom"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "dvcenter-dbox-prd-scus-001",
+          "resourceGroup": "rg-devbox-prd-scus-001",
+          "location": "southcentralus",
+          "catalogPerProjectEnabled": true,
+          "createNetworkConnection": true,
+          "networkConnectionName": "network-connection-devbox-prd-scus-001",
+          "vnetName": "vnet-devbox-prd-scus-001",
+          "vnetResourceGroup": "rg-devbox-prd-scus-001",
+          "subnetName": "default",
+          "domainJoinType": "AzureADJoin",
+          "galleryName": "devbox_imagegallery",
+          "galleryResourceGroup": "rg-devbox-prd-aus-001",
+          "projects": [
+            {
+              "name": "devproject-team-c-prd-scus-001",
+              "maxDevBoxesPerUser": 2,
+              "timeZone": "America/Chicago",
+              "tags": {
+                "team": "team-c",
+                "region": "us-south"
+              },
+              "pools": [
+                {
+                  "poolName": "pool-standard",
+                  "displayName": "CORE-Dev-Large-v1",
+                  "devBoxSku": "general_i_32c128gb512ssd_v2",
+                  "storageType": "ssd_512gb",
+                  "autoStopTime": "19:00",
+                  "galleryImageName": "win11-custom"
+                }
+              ]
+            },
+            {
+              "name": "devproject-team-d-prd-scus-001",
+              "maxDevBoxesPerUser": 3,
+              "timeZone": "America/Chicago",
+              "tags": {
+                "team": "team-d",
+                "region": "us-south"
+              },
+              "pools": [
+                {
+                  "poolName": "pool-standard",
+                  "displayName": "CORE-Dev-Large-v1",
+                  "devBoxSku": "general_i_32c128gb512ssd_v2",
+                  "storageType": "ssd_512gb",
+                  "autoStopTime": "19:00",
+                  "galleryImageName": "win11-custom"
+                }
+              ]
+            },
+            {
+              "name": "devproject-team-e-prd-scus-001",
+              "maxDevBoxesPerUser": 3,
+              "timeZone": "America/Chicago",
+              "tags": {
+                "team": "team-e",
+                "region": "us-south"
+              },
+              "pools": [
+                {
+                  "poolName": "pool-standard",
+                  "displayName": "CORE-Dev-Small-v1",
+                  "devBoxSku": "general_i_8c32gb256ssd_v2",
+                  "storageType": "ssd_256gb",
+                  "autoStopTime": "19:00",
+                  "galleryImageName": "win11-custom"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

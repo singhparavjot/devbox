@@ -1,0 +1,180 @@
+name: Deploy Dev Center Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+      - test
+    paths:
+      - '**.bicep'
+      - 'parameters.json'
+      - '.github/workflows/deploy-devcenter.yml'
+  pull_request:
+    branches:
+      - main
+      - test
+    paths:
+      - '**.bicep'
+      - 'parameters.json'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Select what to run'
+        required: true
+        default: 'validate-only'
+        type: choice
+        options:
+          - validate-only
+          - what-if-only
+          - deploy-only
+          - full-pipeline
+
+env:
+  LOCATION: australiaeast
+
+jobs:
+  # ==========================================================================
+  # Validate Bicep
+  # ==========================================================================
+  validate:
+    name: Validate Bicep Templates
+    runs-on: enc-builder
+    environment: pilot
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request' ||
+      github.event.inputs.action == 'validate-only' ||
+      github.event.inputs.action == 'full-pipeline'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate Bicep syntax
+        run: |
+          az bicep build --file main.bicep
+
+      - name: Validate deployment
+        run: |
+          az deployment sub validate \
+            --location ${{ env.LOCATION }} \
+            --template-file main.bicep \
+            --parameters parameters.json
+
+  # ==========================================================================
+  # What-If (Preview Changes)
+  # ==========================================================================
+  what-if:
+    name: Preview Changes (What-If)
+    runs-on: enc-builder
+    environment: pilot
+    needs: validate
+    if: |
+      always() && 
+      (needs.validate.result == 'success' || needs.validate.result == 'skipped') &&
+      (
+        github.event_name == 'push' ||
+        github.event_name == 'pull_request' ||
+        github.event.inputs.action == 'what-if-only' ||
+        github.event.inputs.action == 'full-pipeline'
+      )
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run What-If deployment
+        run: |
+          az deployment sub what-if \
+            --location ${{ env.LOCATION }} \
+            --template-file main.bicep \
+            --parameters parameters.json
+
+  # ==========================================================================
+  # Deploy Infrastructure
+  # ==========================================================================
+  deploy:
+    name: Deploy Dev Center
+    runs-on: enc-builder
+    environment: pilot
+    needs: what-if
+    if: |
+      always() &&
+      (needs.what-if.result == 'success' || needs.what-if.result == 'skipped') &&
+      (
+        github.event_name == 'push' ||
+        github.event.inputs.action == 'deploy-only' ||
+        github.event.inputs.action == 'full-pipeline'
+      )
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      devCenterId: ${{ steps.deploy.outputs.devCenterId }}
+      devCenterName: ${{ steps.deploy.outputs.devCenterName }}
+      projectName: ${{ steps.deploy.outputs.projectName }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep template
+        id: deploy
+        run: |
+          echo "Starting deployment..."
+          
+          result=$(az deployment sub create \
+            --location ${{ env.LOCATION }} \
+            --template-file main.bicep \
+            --parameters parameters.json \
+            --name "devcenter-$(date +%Y%m%d-%H%M%S)" \
+            --output json)
+          
+          echo "Deployment completed successfully!"
+          
+          # Extract outputs
+          devCenterId=$(echo $result | jq -r '.properties.outputs.devCenterId.value')
+          devCenterName=$(echo $result | jq -r '.properties.outputs.devCenterName.value')
+          projectName=$(echo $result | jq -r '.properties.outputs.projectName.value')
+          
+          echo "devCenterId=$devCenterId" >> $GITHUB_OUTPUT
+          echo "devCenterName=$devCenterName" >> $GITHUB_OUTPUT
+          echo "projectName=$projectName" >> $GITHUB_OUTPUT
+
+      - name: Display deployment outputs
+        run: |
+          echo "=== Deployment Outputs ==="
+          echo "Dev Center ID: ${{ steps.deploy.outputs.devCenterId }}"
+          echo "Dev Center Name: ${{ steps.deploy.outputs.devCenterName }}"
+          echo "Project Name: ${{ steps.deploy.outputs.projectName }}"

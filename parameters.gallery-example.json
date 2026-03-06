@@ -1,0 +1,19 @@
+{
+  "_comment": "This is a backup of center-q with gallery configuration. Copy this into parameters.json when you have permissions.",
+  "center-q-with-gallery": {
+    "name": "center-q",
+    "createNetworkConnection": true,
+    "networkConnectionName": "network-conn-from-bicep",
+    "vnetName": "vnet-devbox-prd-ae-001",
+    "vnetResourceGroup": "rg-devbox-prd-ae-001",
+    "subnetName": "default",
+    "domainJoinType": "AzureADJoin",
+    "galleryName": "devbox_imagegallery",
+    "galleryResourceGroup": "rg-devbox-prd-ae-001",
+    "galleryImageName": "win11-vs22-custom",
+    "projects": [
+      { "name": "project-c", "poolName": "pool-c" },
+      { "name": "project-d", "poolName": "pool-d" }
+    ]
+  }
+}
