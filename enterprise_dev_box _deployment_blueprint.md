@@ -1,7 +1,7 @@
 Enterprise Microsoft Dev Box Deployment Blueprint
 =================================================
 
-[[_TOC_]]
+<!-- GitHub renders a TOC automatically via the file header menu -->
 
 * * *
 
@@ -792,811 +792,559 @@ Projects use **IANA timezone format** for auto-stop schedules.
 
 <div style="background-color:#0078D4; color:white; padding:10px; border-radius:5px; margin:10px 0;">
 
-<h3 style="margin:0; color:white;">12. Monitoring & Operations</h3>
+<h3 style="margin:0; color:white;">12. Monitoring & Operations — Session Analytics</h3>
 
 </div>
 
 ---------------------------
- 
 
-``` mermaid
-
-flowchart TB
-
-    subgraph Sources["Data Sources"]
-
-        DC["Dev Center"]
-
-        PROJ["Projects"]
-
-        POOL["Dev Box Pools"]
-
-        NC["Network Connections"]
-
-    end
-
-  
-
-    subgraph Collection["Data Collection"]
-
-        DIAG["Diagnostic Settings"]
-
-        LOGS["Azure Monitor Logs"]
-
-        METRICS["Platform Metrics"]
-
-    end
-
-  
-
-    subgraph Analysis["Analysis & Alerting"]
-
-        LAW["Log Analytics Workspace"]
-
-        ALERTS["Azure Alerts"]
-
-        DASH["Azure Dashboards"]
-
-        WB["Azure Workbooks"]
-
-    end
-
-  
-
-    subgraph Actions["Response Actions"]
-
-        AG["Action Groups"]
-
-        EMAIL["Email Notifications"]
-
-        WEBHOOK["Webhooks/Logic Apps"]
-
-        ITSM["ITSM Integration"]
-
-    end
-
-  
-
-    DC --> DIAG
-
-    PROJ --> DIAG
-
-    POOL --> DIAG
-
-    NC --> DIAG
-
-  
-
-    DIAG --> LOGS
-
-    DIAG --> METRICS
-
-  
-
-    LOGS --> LAW
-
-    METRICS --> LAW
-
-  
-
-    LAW --> ALERTS
-
-    LAW --> DASH
-
-    LAW --> WB
-
-  
-
-    ALERTS --> AG
-
-    AG --> EMAIL
-
-    AG --> WEBHOOK
-
-    AG --> ITSM
-
-  
-
-    style LAW fill:#0078D4,color:#fff
-
-    style ALERTS fill:#E74C3C,color:#fff
-
-    style DASH fill:#107C10,color:#fff
-
-```
-
-  
-
-### Diagnostic Settings Configuration
-
-  
-
-Enable diagnostic settings on all Dev Center resources to capture logs and metrics.
-
-  
-
-#### Log Categories
-
-  
-
-| Log Category | Description | Retention (Days) |
-| --- | --- | --- |
-| `DevCenterDiagnosticLogs` | Dev Center operations and management plane activities | 90 |
-| `DevBoxProvisioning` | Dev Box creation, deletion, and provisioning events | 90 |
-| `DevBoxConnections` | User connection and session events | 30 |
-| `NetworkConnectionHealth` | Network connection health check results | 90 |
-| `CustomizationTaskLogs` | Customization task execution logs | 90 |
-| `AuditLogs` | Administrative and security audit events | 365 |
-
-  
-
-#### Bicep Example: Diagnostic Settings
-
-  
-
-```bicep
-
-resource devCenterDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-
-  name: 'devbox-diagnostics'
-
-  scope: devCenter
-
-  properties: {
-
-    workspaceId: logAnalyticsWorkspace.id
-
-    logs: [
-
-      { category: 'DevCenterDiagnosticLogs', enabled: true, retentionPolicy: { enabled: true, days: 90 } }
-
-      { category: 'DataPlaneRequests', enabled: true, retentionPolicy: { enabled: true, days: 90 } }
-
-    ]
-
-    metrics: [
-
-      { category: 'AllMetrics', enabled: true, retentionPolicy: { enabled: true, days: 90 } }
-
-    ]
-
-  }
-
-}
-
-```
-
-  
+> **Purpose:** Dev Box monitoring based on `DevCenterConnectionLogs` and `DevCenterResourceOperationLogs`.
+> Audience: Operations teams, session monitoring, connection analytics.
+>
+> **Data Sources:**
+> - `DevCenterConnectionLogs` — State lifecycle (`Started` / `Connected` / `Completed`)
+> - `DevCenterResourceOperationLogs` — Dev Box ownership mapping
 
 ---
 
-  
+### Section 1: Real-Time Session Monitoring
 
-### Key Metrics for Production Monitoring
+#### 1.1 Currently Active Sessions
 
-  
-
-#### Dev Box Provisioning Metrics
-
-  
-
-| Metric Name | Description | Unit | Aggregation | Target SLA |
-| --- | --- | --- | --- | --- |
-| `DevBoxProvisioningSuccessCount` | Number of successful Dev Box provisions | Count | Total | N/A |
-| `DevBoxProvisioningFailureCount` | Number of failed Dev Box provisions | Count | Total | < 5% of total |
-| `DevBoxProvisioningDuration` | Time taken to provision a Dev Box | Seconds | Average/P95 | < 45 minutes |
-| `DevBoxDeletionCount` | Number of Dev Box deletions | Count | Total | N/A |
-| `ActiveDevBoxCount` | Number of currently running Dev Boxes | Count | Average | Within quota |
-
-  
-
-#### Pool & Capacity Metrics
-
-  
-
-| Metric Name | Description | Unit | Aggregation | Alert Threshold |
-| --- | --- | --- | --- | --- |
-| `PoolUtilization` | Percentage of pool capacity in use | Percent | Average | > 80% |
-| `PoolHealthStatus` | Health state of Dev Box pools | Status | Latest | Unhealthy |
-| `AvailableDevBoxQuota` | Remaining quota for Dev Box creation | Count | Current | < 10 |
-| `PendingProvisioningRequests` | Queue of pending Dev Box requests | Count | Average | > 20 |
-  
-
-#### Network Connection Metrics
-
-  
-
-| Metric Name | Description | Unit | Aggregation | Alert Threshold |
-| --- | --- | --- | --- | --- |
-| `NetworkConnectionHealthStatus` | Network connection health check result | Status | Latest | Failed |
-| `DomainJoinSuccessRate` | Percentage of successful domain joins | Percent | Average | < 95% |
-| `DnsResolutionLatency` | DNS resolution time for Dev Boxes | Milliseconds | P95 | > 500ms |
-| `VNetConnectivityStatus` | VNet peering and connectivity status | Status | Latest | Degraded |
-
-  
-
-#### User Session Metrics
-
-  
-
-| Metric Name | Description | Unit | Aggregation | Purpose |
-| --- | --- | --- | --- | --- |
-| `ActiveSessions` | Number of active user sessions | Count | Average | Capacity planning |
-| `SessionDuration` | Average user session duration | Hours | Average | Usage patterns |
-| `ConnectionLatency` | User connection latency | Milliseconds | P95 | Performance |
-| `DisconnectedDevBoxes` | Dev Boxes in disconnected state | Count | Current | Cost optimization |
-
-  
-
-#### Customization Metrics
-
-  
-
-| Metric Name | Description | Unit | Aggregation | Alert Threshold |
-| --- | --- | --- | --- | --- |
-| `CustomizationTaskSuccessRate` | Percentage of successful customization tasks | Percent | Average | < 90% |
-| `CustomizationTaskDuration` | Time to complete customization tasks | Minutes | P95 | > 60 minutes |
-| `CustomizationTaskFailures` | Number of failed customization tasks | Count | Total | > 3 per hour |
-
-  
-
----
-
-  
-
-### Production Alert Rules
-
-  
-
-#### Critical Alerts (P1 - Immediate Response)
-
-  
-
-| Alert Name | Condition | Severity | Action |
-| --- | --- | --- | --- |
-| **Dev Box Provisioning Failure Spike** | `DevBoxProvisioningFailureCount > 5` in 15 min | Critical | Page on-call, investigate immediately |
-| **Network Connection Unhealthy** | `NetworkConnectionHealthStatus == Failed` for 5 min | Critical | Page on-call, check network health |
-| **Pool Provisioning Stopped** | No successful provisions in 1 hour during business hours | Critical | Escalate to platform team |
-| **Quota Exhausted** | `AvailableDevBoxQuota == 0` | Critical | Request quota increase immediately |
-
-  
-
-#### High Priority Alerts (P2 - Respond Within 1 Hour)
-
-  
-
-| Alert Name | Condition | Severity | Action |
-| --- | --- | --- | --- |
-| **Pool Capacity Warning** | `PoolUtilization > 80%` for 30 min | High | Plan capacity expansion |
-| **Domain Join Failures** | `DomainJoinSuccessRate < 95%` in 1 hour | High | Check AD connectivity |
-| **Customization Task Failures** | `CustomizationTaskFailures > 10` in 1 hour | High | Review task definitions |
-| **Provisioning Latency High** | `DevBoxProvisioningDuration P95 > 60 min` | High | Investigate performance |
-
-  
-
-#### Medium Priority Alerts (P3 - Respond Within 4 Hours)
-
-  
-
-| Alert Name | Condition | Severity | Action |
-| --- | --- | --- | --- |
-| **Quota Running Low** | `AvailableDevBoxQuota < 20%` of limit | Medium | Plan quota increase |
-| **Orphaned Dev Boxes** | Dev Boxes running > 48 hours without session | Medium | Review for cleanup |
-| **Auto-Stop Failures** | Auto-stop schedule not executing | Medium | Check schedule config |
-| **Image Update Available** | Gallery image has new version | Medium | Plan image update |
-  
-
-#### Low Priority Alerts (P4 - Monitor/Inform)
-
-  
-
-| Alert Name | Condition | Severity | Action |
-| --- | --- | --- | --- |
-| **Usage Trend Alert** | Week-over-week usage increase > 30% | Low | Capacity planning |
-| **Cost Anomaly** | Daily cost > 150% of baseline | Low | Review for optimization |
-| **Idle Dev Boxes** | Dev Boxes idle > 4 hours during business hours | Low | User notification |
-
-  
-
----
-
-  
-
-### Sample KQL Queries for Log Analytics
-
-  
-
-#### Provisioning Success Rate (Last 24 Hours)
-
-  
+> All Dev Boxes with currently active user sessions.
+> Based on connection `State = "Connected"` with no subsequent `"Completed"` event.
 
 ```kusto
+let devBoxOwnership =
+    DevCenterResourceOperationLogs
+    | where OperationName in ("CreateDevBox", "DevBoxStartAction", "Schedule", "DevBoxStopAction")
+    | extend DevBoxName = tostring(split(SubResourceId, "/")[-1])
+    | extend DevBoxUser = tostring(split(SubResourceId, "/")[-3])
+    | extend DevProject = tostring(split(AdditionalProperties.ProjectId, "/")[-1])
+    | where isnotempty(DevBoxName) and isnotempty(DevBoxUser)
+    | summarize arg_max(TimeGenerated, DevBoxUser, DevProject) by DevBoxName;
 
-DevCenterDiagnosticLogs
-
-| where TimeGenerated > ago(24h)
-
-| where OperationName == "DevBoxProvisioning"
-
-| summarize
-
-    TotalAttempts = count(),
-
-    Successes = countif(ResultType == "Success"),
-
-    Failures = countif(ResultType == "Failure")
-
-| extend SuccessRate = round(100.0 * Successes / TotalAttempts, 2)
-
-| project TotalAttempts, Successes, Failures, SuccessRate
-
+DevCenterConnectionLogs
+| summarize arg_max(TimeGenerated, State, SessionHostName) by DevBoxName
+| where State == "Connected"
+| extend SessionStartTime = TimeGenerated
+| extend ActiveDuration = round(datetime_diff("minute", now(), SessionStartTime) / 60.0, 2)
+| join kind=leftouter devBoxOwnership on DevBoxName
+| project DevBoxName,
+          SessionHostName,
+          DevBoxUser,
+          DevProject,
+          SessionStartTime,
+          ActiveHours = ActiveDuration
+| order by ActiveHours desc
 ```
 
-  
+#### 1.2 Active Session Summary (KPI)
 
-#### Provisioning Failures by Error Type
-
-  
+> Real-time KPI showing current active sessions — ideal for a dashboard tile.
 
 ```kusto
+let devBoxOwnership =
+    DevCenterResourceOperationLogs
+    | where OperationName in ("CreateDevBox", "DevBoxStartAction", "Schedule", "DevBoxStopAction")
+    | extend DevBoxName = tostring(split(SubResourceId, "/")[-1])
+    | extend DevBoxUser = tostring(split(SubResourceId, "/")[-3])
+    | extend DevProject = tostring(split(AdditionalProperties.ProjectId, "/")[-1])
+    | where isnotempty(DevBoxName) and isnotempty(DevBoxUser)
+    | summarize arg_max(TimeGenerated, DevBoxUser, DevProject) by DevBoxName;
 
-DevCenterDiagnosticLogs
+DevCenterConnectionLogs
+| summarize arg_max(TimeGenerated, State, SessionHostName) by DevBoxName
+| where State == "Connected"
+| join kind=leftouter devBoxOwnership on DevBoxName
+| summarize 
+      TotalActiveSessions = count(),
+      UniqueDevBoxes      = dcount(DevBoxName),
+      UniqueSessionHosts  = dcount(SessionHostName),
+      UniqueUsers         = dcount(DevBoxUser),
+      UniqueProjects      = dcount(DevProject)
+```
 
+#### 1.3 Long Running Active Sessions Alert
+
+> Active sessions exceeding threshold duration (default: **12 hours**).
+> Use case: cost alerts, forgotten sessions, auto-disconnect policy.
+
+```kusto
+let threshold_hours = 12;
+
+let devBoxOwnership =
+    DevCenterResourceOperationLogs
+    | where OperationName in ("CreateDevBox", "DevBoxStartAction", "Schedule", "DevBoxStopAction")
+    | extend DevBoxName = tostring(split(SubResourceId, "/")[-1])
+    | extend DevBoxUser = tostring(split(SubResourceId, "/")[-3])
+    | extend DevProject = tostring(split(AdditionalProperties.ProjectId, "/")[-1])
+    | where isnotempty(DevBoxName) and isnotempty(DevBoxUser)
+    | summarize arg_max(TimeGenerated, DevBoxUser, DevProject) by DevBoxName;
+
+DevCenterConnectionLogs
+| summarize arg_max(TimeGenerated, State, SessionHostName) by DevBoxName
+| where State == "Connected"
+| extend SessionStartTime = TimeGenerated
+| extend ActiveHours = round(datetime_diff("minute", now(), SessionStartTime) / 60.0, 2)
+| where ActiveHours > threshold_hours
+| join kind=leftouter devBoxOwnership on DevBoxName
+| project DevBoxName,
+          SessionHostName,
+          DevBoxUser,
+          DevProject,
+          SessionStartTime,
+          ActiveHours
+| order by ActiveHours desc
+```
+
+---
+
+### Section 2: Session History & Patterns
+
+#### 2.1 Daily Session Summary (Last 7 Days)
+
+> Daily session count and duration per Dev Box. Pairs `Connected` → `Completed` events.
+
+```kusto
+let devBoxOwnership =
+    DevCenterResourceOperationLogs
+    | where OperationName in ("CreateDevBox", "DevBoxStartAction", "Schedule", "DevBoxStopAction")
+    | extend DevBoxName = tostring(split(SubResourceId, "/")[-1])
+    | extend DevBoxUser = tostring(split(SubResourceId, "/")[-3])
+    | extend DevProject = tostring(split(AdditionalProperties.ProjectId, "/")[-1])
+    | where isnotempty(DevBoxName) and isnotempty(DevBoxUser)
+    | summarize arg_max(TimeGenerated, DevBoxUser, DevProject) by DevBoxName;
+
+DevCenterConnectionLogs
+| where TimeGenerated > ago(8d)
+| where State in ("Connected", "Completed")
+| sort by DevBoxName asc, TimeGenerated asc
+| serialize
+| extend NextState = next(State, 1)
+| extend NextTime  = next(TimeGenerated, 1)
+| extend NextBox   = next(DevBoxName, 1)
+| extend NextHost  = next(SessionHostName, 1)
+| where State == "Connected"
+      and NextState == "Completed"
+      and NextBox == DevBoxName
+| extend SessionMinutes = max_of(0, datetime_diff("minute", NextTime, TimeGenerated))
+| where SessionMinutes > 0 and SessionMinutes < 1440  // Max 24h per session
+| extend Date = startofday(TimeGenerated)
+| summarize 
+      TotalSessions       = count(),
+      TotalSessionMinutes = sum(SessionMinutes),
+      AvgSessionMinutes   = round(avg(SessionMinutes), 1),
+      LongestSession      = max(SessionMinutes),
+      SessionHostName     = any(SessionHostName)
+  by Date, DevBoxName
+| extend TotalSessionHours   = round(TotalSessionMinutes / 60.0, 2)
+| extend AvgSessionHours     = round(AvgSessionMinutes / 60.0, 2)
+| extend LongestSessionHours = round(LongestSession / 60.0, 2)
+| where Date >= ago(7d)
+| join kind=leftouter devBoxOwnership on DevBoxName
+| project Date, DevBoxName, SessionHostName, DevBoxUser, DevProject,
+          TotalSessions, TotalSessionHours, AvgSessionHours, LongestSessionHours
+| order by Date desc, TotalSessionHours desc
+```
+
+#### 2.2 Weekly Session Summary (Last 4 Weeks)
+
+> Weekly session aggregation per Dev Box for capacity planning.
+
+```kusto
+let devBoxOwnership =
+    DevCenterResourceOperationLogs
+    | where OperationName in ("CreateDevBox", "DevBoxStartAction", "Schedule", "DevBoxStopAction")
+    | extend DevBoxName = tostring(split(SubResourceId, "/")[-1])
+    | extend DevBoxUser = tostring(split(SubResourceId, "/")[-3])
+    | extend DevProject = tostring(split(AdditionalProperties.ProjectId, "/")[-1])
+    | where isnotempty(DevBoxName) and isnotempty(DevBoxUser)
+    | summarize arg_max(TimeGenerated, DevBoxUser, DevProject) by DevBoxName;
+
+DevCenterConnectionLogs
+| where TimeGenerated > ago(29d)
+| where State in ("Connected", "Completed")
+| sort by DevBoxName asc, TimeGenerated asc
+| serialize
+| extend NextState = next(State, 1)
+| extend NextTime  = next(TimeGenerated, 1)
+| extend NextBox   = next(DevBoxName, 1)
+| where State == "Connected"
+      and NextState == "Completed"
+      and NextBox == DevBoxName
+| extend SessionMinutes = max_of(0, datetime_diff("minute", NextTime, TimeGenerated))
+| where SessionMinutes > 0 and SessionMinutes < 10080  // Max 7 days
+| extend WeekStart = startofweek(TimeGenerated)
+| summarize 
+      TotalSessions       = count(),
+      TotalSessionMinutes = sum(SessionMinutes),
+      AvgSessionMinutes   = round(avg(SessionMinutes), 1),
+      SessionHostName     = any(SessionHostName)
+  by WeekStart, DevBoxName
+| extend TotalSessionHours = round(TotalSessionMinutes / 60.0, 2)
+| extend AvgSessionHours   = round(AvgSessionMinutes / 60.0, 2)
+| where WeekStart >= startofweek(ago(28d))
+| join kind=leftouter devBoxOwnership on DevBoxName
+| project WeekStart, DevBoxName, SessionHostName, DevBoxUser, DevProject,
+          TotalSessions, TotalSessionHours, AvgSessionHours
+| order by WeekStart desc, TotalSessionHours desc
+```
+
+#### 2.3 Session Trend (Last 30 Days) — Aggregated
+
+> Daily total session count and hours across all Dev Boxes. Ideal for a line chart.
+
+```kusto
+DevCenterConnectionLogs
+| where TimeGenerated > ago(31d)
+| where State in ("Connected", "Completed")
+| sort by DevBoxName asc, TimeGenerated asc
+| serialize
+| extend NextState = next(State, 1)
+| extend NextTime  = next(TimeGenerated, 1)
+| extend NextBox   = next(DevBoxName, 1)
+| where State == "Connected"
+      and NextState == "Completed"
+      and NextBox == DevBoxName
+| extend SessionMinutes = max_of(0, datetime_diff("minute", NextTime, TimeGenerated))
+| where SessionMinutes > 0 and SessionMinutes < 1440
+| extend Date = startofday(TimeGenerated)
+| summarize 
+      TotalSessions       = count(),
+      TotalSessionMinutes = sum(SessionMinutes),
+      UniqueDevBoxes      = dcount(DevBoxName)
+  by Date
+| extend TotalSessionHours = round(TotalSessionMinutes / 60.0, 2)
+| extend AvgSessionHours   = round(TotalSessionMinutes / toreal(TotalSessions) / 60.0, 2)
+| where Date >= ago(30d)
+| project Date, TotalSessions, TotalSessionHours, UniqueDevBoxes, AvgSessionHours
+| order by Date asc
+```
+
+#### 2.4 Session Duration Distribution
+
+> Statistical distribution of session lengths.
+> Buckets: `<15min`, `15-60min`, `1-4h`, `4-8h`, `8-12h`, `>12h`
+
+```kusto
+DevCenterConnectionLogs
+| where TimeGenerated > ago(30d)
+| where State in ("Connected", "Completed")
+| sort by DevBoxName asc, TimeGenerated asc
+| serialize
+| extend NextState = next(State, 1)
+| extend NextTime  = next(TimeGenerated, 1)
+| extend NextBox   = next(DevBoxName, 1)
+| where State == "Connected"
+      and NextState == "Completed"
+      and NextBox == DevBoxName
+| extend SessionMinutes = max_of(0, datetime_diff("minute", NextTime, TimeGenerated))
+| where SessionMinutes > 0 and SessionMinutes < 1440
+| extend DurationBucket = case(
+      SessionMinutes < 15,                   "< 15 minutes",
+      SessionMinutes >= 15 and SessionMinutes < 60,  "15-60 minutes",
+      SessionMinutes >= 60 and SessionMinutes < 240, "1-4 hours",
+      SessionMinutes >= 240 and SessionMinutes < 480, "4-8 hours",
+      SessionMinutes >= 480 and SessionMinutes < 720, "8-12 hours",
+                                              "> 12 hours")
+| summarize SessionCount = count() by DurationBucket
+| extend TotalSessions = toscalar(
+    DevCenterConnectionLogs
+    | where TimeGenerated > ago(30d)
+    | where State in ("Connected", "Completed")
+    | sort by DevBoxName asc, TimeGenerated asc
+    | serialize
+    | extend NextState = next(State, 1)
+    | extend NextBox = next(DevBoxName, 1)
+    | where State == "Connected" and NextState == "Completed" and NextBox == DevBoxName
+    | count)
+| extend Percentage = round(100.0 * SessionCount / TotalSessions, 1)
+| project DurationBucket, SessionCount, Percentage
+| order by SessionCount desc
+```
+
+---
+
+### Section 3: Connection Performance Analytics
+
+#### 3.1 Connection Latency by Day (Last 30 Days)
+
+> Time from `Started` → `Connected` state (connection establishment).
+> High latency (>60s) may indicate cold starts or resource contention.
+
+```kusto
+DevCenterConnectionLogs
+| where TimeGenerated > ago(30d)
+| where State in ("Started", "Connected")
+| sort by DevBoxName asc, TimeGenerated asc
+| serialize
+| extend NextState = next(State, 1)
+| extend NextTime  = next(TimeGenerated, 1)
+| extend NextBox   = next(DevBoxName, 1)
+| where State == "Started"
+      and NextState == "Connected"
+      and NextBox == DevBoxName
+| extend LatencySeconds = datetime_diff("second", NextTime, TimeGenerated)
+| where LatencySeconds between (1 .. 600)  // Filter outliers (1s-10min)
+| extend Date = startofday(TimeGenerated)
+| summarize 
+      AvgLatencySeconds = round(avg(LatencySeconds), 1),
+      P50               = percentile(LatencySeconds, 50),
+      P90               = percentile(LatencySeconds, 90),
+      P95               = percentile(LatencySeconds, 95),
+      P99               = percentile(LatencySeconds, 99),
+      Samples           = count()
+  by Date
+| order by Date desc
+```
+
+#### 3.2 Connection Latency by Dev Box (Last 30 Days)
+
+> Connection performance per individual Dev Box for troubleshooting.
+
+```kusto
+DevCenterConnectionLogs
+| where TimeGenerated > ago(30d)
+| where State in ("Started", "Connected")
+| sort by DevBoxName asc, TimeGenerated asc
+| serialize
+| extend NextState = next(State, 1)
+| extend NextTime  = next(TimeGenerated, 1)
+| extend NextBox   = next(DevBoxName, 1)
+| extend NextHost  = next(SessionHostName, 1)
+| where State == "Started"
+      and NextState == "Connected"
+      and NextBox == DevBoxName
+| extend LatencySeconds = datetime_diff("second", NextTime, TimeGenerated)
+| where LatencySeconds between (1 .. 600)
+| summarize 
+      AvgLatencySeconds  = round(avg(LatencySeconds), 1),
+      P90                = percentile(LatencySeconds, 90),
+      P95                = percentile(LatencySeconds, 95),
+      TotalConnections   = count(),
+      SessionHostName    = any(NextHost)
+  by DevBoxName
+| order by P90 desc
+```
+
+#### 3.3 Slow Connections Alert (Last 7 Days)
+
+> Recent connections exceeding latency threshold (default: **60 seconds**).
+
+```kusto
+let threshold_seconds = 60;
+
+DevCenterConnectionLogs
 | where TimeGenerated > ago(7d)
-
-| where OperationName == "DevBoxProvisioning"
-
-| where ResultType == "Failure"
-
-| summarize FailureCount = count() by ErrorCode, ErrorMessage
-
-| order by FailureCount desc
-
-| take 10
-
+| where State in ("Started", "Connected")
+| sort by DevBoxName asc, TimeGenerated asc
+| serialize
+| extend NextState = next(State, 1)
+| extend NextTime  = next(TimeGenerated, 1)
+| extend NextBox   = next(DevBoxName, 1)
+| extend NextHost  = next(SessionHostName, 1)
+| where State == "Started"
+      and NextState == "Connected"
+      and NextBox == DevBoxName
+| extend LatencySeconds = datetime_diff("second", NextTime, TimeGenerated)
+| where LatencySeconds > threshold_seconds and LatencySeconds < 600
+| project TimeGenerated,
+          DevBoxName,
+          SessionHostName = NextHost,
+          LatencySeconds
+| order by LatencySeconds desc
 ```
-
-  
-
-#### Average Provisioning Duration by Pool
-
-  
-
-```kusto
-
-DevCenterDiagnosticLogs
-
-| where TimeGenerated > ago(24h)
-
-| where OperationName == "DevBoxProvisioning"
-
-| where ResultType == "Success"
-
-| summarize
-
-    AvgDuration = avg(DurationMs) / 60000,
-
-    P95Duration = percentile(DurationMs, 95) / 60000,
-
-    MaxDuration = max(DurationMs) / 60000
-
-    by PoolName
-
-| project PoolName,
-
-    AvgDurationMinutes = round(AvgDuration, 2),
-
-    P95DurationMinutes = round(P95Duration, 2),
-
-    MaxDurationMinutes = round(MaxDuration, 2)
-
-```
-
-  
-
-#### Network Connection Health History
-
-  
-
-```kusto
-
-DevCenterDiagnosticLogs
-
-| where TimeGenerated > ago(7d)
-
-| where OperationName == "NetworkConnectionHealthCheck"
-
-| summarize
-
-    HealthChecks = count(),
-
-    PassedChecks = countif(HealthStatus == "Passed"),
-
-    FailedChecks = countif(HealthStatus == "Failed")
-
-    by bin(TimeGenerated, 1h), NetworkConnectionName
-
-| extend HealthPercentage = round(100.0 * PassedChecks / HealthChecks, 2)
-
-| order by TimeGenerated desc
-
-```
-
-  
-
-#### Active Dev Boxes by Project and Pool
-
-  
-
-```kusto
-
-DevCenterResources
-
-| where TimeGenerated > ago(1h)
-
-| where ResourceType == "DevBox"
-
-| where ProvisioningState == "Succeeded"
-
-| where PowerState == "Running"
-
-| summarize ActiveDevBoxes = count() by ProjectName, PoolName
-
-| order by ActiveDevBoxes desc
-
-```
-
-  
-
-#### Customization Task Analysis
-
-  
-
-```kusto
-
-DevCenterDiagnosticLogs
-
-| where TimeGenerated > ago(24h)
-
-| where OperationName contains "Customization"
-
-| summarize
-
-    TotalTasks = count(),
-
-    SuccessfulTasks = countif(ResultType == "Success"),
-
-    FailedTasks = countif(ResultType == "Failure"),
-
-    AvgDurationSeconds = avg(DurationMs) / 1000
-
-    by TaskName
-
-| extend SuccessRate = round(100.0 * SuccessfulTasks / TotalTasks, 2)
-
-| order by FailedTasks desc
-
-```
-
-  
-
-#### Cost Optimization - Idle Dev Boxes
-
-  
-
-```kusto
-
-DevCenterDiagnosticLogs
-
-| where TimeGenerated > ago(24h)
-
-| where OperationName == "DevBoxSessionEnd"
-
-| summarize LastActivity = max(TimeGenerated) by DevBoxName, UserPrincipalName
-
-| where LastActivity < ago(4h)
-
-| project DevBoxName, UserPrincipalName, LastActivity, IdleHours = datetime_diff('hour', now(), LastActivity)
-
-| order by IdleHours desc
-
-```
-
-  
 
 ---
 
-  
+### Section 4: Capacity & Concurrency Analytics
 
-### Azure Workbook: Dev Box Operations Dashboard
+#### 4.1 Peak Concurrent Sessions (Last 30 Days)
 
-  
+> Maximum simultaneous active sessions. Uses 15-minute time buckets.
+> Use case: capacity planning, license requirements, infrastructure sizing.
 
-Create an Azure Workbook with the following sections:
+```kusto
+let bucket = 15m;
+let lookback = 30d;
 
-  
+let sessions =
+    DevCenterConnectionLogs
+    | where TimeGenerated > ago(lookback)
+    | where State in ("Connected", "Completed")
+    | sort by DevBoxName asc, TimeGenerated asc
+    | serialize
+    | extend NextState = next(State, 1)
+    | extend NextTime  = next(TimeGenerated, 1)
+    | extend NextBox   = next(DevBoxName, 1)
+    | where State == "Connected"
+          and NextState == "Completed"
+          and NextBox == DevBoxName
+    | project DevBoxName, SessionStart = TimeGenerated, SessionEnd = NextTime;
 
-#### Dashboard Sections
+let minTime = toscalar(sessions | summarize min(SessionStart));
+let maxTime = now();
 
-  
-
-| Section | Visualizations | Purpose |
-| --- | --- | --- |
-| **Executive Summary** | KPI tiles for success rate, active Dev Boxes, cost | Leadership view |
-| **Provisioning Health** | Time chart of success/failure, failure breakdown pie chart | Operations view |
-| **Capacity Overview** | Pool utilization gauges, quota remaining bars | Capacity planning |
-| **Network Health** | Health check timeline, connectivity status grid | Infrastructure view |
-| **User Activity** | Session heatmap, top users table | Usage patterns |
-| **Cost Analysis** | Cost by project/team, trending chart | FinOps view |
-| **Alerts Summary** | Active alerts table, alert trend chart | Incident management |
-
-  
-
-#### Recommended Refresh Intervals
-
-  
-
-| Dashboard Section | Refresh Interval |
-| --- | --- |
-| Real-time Operations | 5 minutes |
-| Capacity & Health | 15 minutes |
-| Cost & Usage Analytics | 1 hour |
-| Weekly/Monthly Reports | Daily |
-
-  
-
----
-
-  
-
-### Action Group Configuration
-
-  
-
-#### Production Action Group Setup
-
-  
-
-| Severity | Notification Method | Recipients |
-| --- | --- | --- |
-| **Critical (P1)** | SMS + Email + PagerDuty/ServiceNow | On-call engineer, Platform lead |
-| **High (P2)** | Email + Teams Channel | Platform team, Dev leads |
-| **Medium (P3)** | Email + Teams Channel | Platform team |
-| **Low (P4)** | Email | Platform team (digest) |
-
-  
-
-#### Bicep Example: Action Group
-
-  
-
-```bicep
-
-resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
-
-  name: 'ag-devbox-alerts-prd'
-
-  location: 'Global'
-
-  properties: {
-
-    groupShortName: 'DevBoxAlerts'
-
-    enabled: true
-
-    emailReceivers: [
-
-      { name: 'PlatformTeam', emailAddress: 'devbox-platform@company.com', useCommonAlertSchema: true }
-
-    ]
-
-    smsReceivers: [
-
-      { name: 'OnCall', countryCode: '1', phoneNumber: '5551234567' }
-
-    ]
-
-    webhookReceivers: [
-
-      { name: 'ServiceNow', serviceUri: 'https://company.service-now.com/api/webhook', useCommonAlertSchema: true }
-
-    ]
-
-  }
-
-}
-
+range TimeBucket from bin(minTime, bucket) to maxTime step bucket
+| extend dummy = 1
+| join kind=inner (sessions | extend dummy = 1) on dummy
+| where TimeBucket >= SessionStart and TimeBucket < SessionEnd
+| summarize 
+      ConcurrentSessions = count(),
+      UniqueDevBoxes    = dcount(DevBoxName)
+  by TimeBucket
+| order by ConcurrentSessions desc
+| take 100
 ```
 
-  
+#### 4.2 Hourly Connection Pattern (Last 30 Days)
 
----
+> Connection activity by hour of day. Useful for auto-scaling policies.
 
-  
-
-### Operational Runbooks
-
-  
-
-#### Daily Operations Checklist
-
-  
-
-| Task | Frequency | KQL/Command | Expected Result |
-| --- | --- | --- | --- |
-| Check provisioning success rate | Daily | See query above | > 95% |
-| Review network connection health | Daily | Azure Portal > Dev Center > Network | All connections healthy |
-| Monitor quota utilization | Daily | `az quota usage show` | < 80% utilized |
-| Review active alerts | Daily | Azure Monitor > Alerts | No critical alerts |
-| Check customization task health | Daily | See query above | > 90% success |
-
-  
-
-#### Weekly Operations Checklist
-
-  
-
-| Task | Frequency | Purpose |
-| --- | --- | --- |
-| Capacity trend analysis | Weekly | Plan for growth |
-| Cost review by project | Weekly | Chargeback and optimization |
-| Orphaned Dev Box cleanup | Weekly | Cost control |
-| Image version review | Weekly | Security patching |
-| Access review | Weekly | Security compliance |
-
-  
-
-#### Monthly Operations Checklist
-
-  
-
-| Task | Frequency | Purpose |
-| --- | --- | --- |
-| Quota planning and requests | Monthly | Ensure capacity |
-| Performance baseline review | Monthly | Trend analysis |
-| Security audit | Monthly | Compliance |
-| Disaster recovery test | Monthly | Business continuity |
-| Documentation update | Monthly | Knowledge management |
-
-  
-
----
-
-  
-
-### Health Check Automation
-
-  
-
-#### PowerShell: Automated Health Check Script
-
-  
-
-```powershell
-
-# Dev Box Platform Health Check Script
-
-param(
-
-    [string]$ResourceGroup = "rg-devbox-prd-aus-001",
-
-    [string]$DevCenterName = "dvcenter-dbox-prd-aus-001"
-
-)
-
-  
-
-# Check Network Connections
-
-$networkConnections = az devcenter admin network-connection list `
-
-    --resource-group $ResourceGroup -o json | ConvertFrom-Json
-
-  
-
-foreach ($nc in $networkConnections) {
-
-    $health = az devcenter admin network-connection show-health-detail `
-
-        --name $nc.name --resource-group $ResourceGroup -o json | ConvertFrom-Json
-
-    if ($health.healthCheckStatus -ne "Passed") {
-
-        Write-Warning "Network Connection '$($nc.name)' health check: $($health.healthCheckStatus)"
-
-    }
-
-}
-
-  
-
-# Check Pool Status
-
-$projects = az devcenter admin project list --resource-group $ResourceGroup -o json | ConvertFrom-Json
-
-  
-
-foreach ($project in $projects) {
-
-    $pools = az devcenter admin pool list `
-
-        --project-name $project.name --resource-group $ResourceGroup -o json | ConvertFrom-Json
-
-    foreach ($pool in $pools) {
-
-        if ($pool.healthStatus -ne "Healthy") {
-
-            Write-Warning "Pool '$($pool.name)' in project '$($project.name)' is $($pool.healthStatus)"
-
-        }
-
-    }
-
-}
-
-  
-
-Write-Host "Health check completed at $(Get-Date)"
-
+```kusto
+DevCenterConnectionLogs
+| where TimeGenerated > ago(30d)
+| where State == "Connected"
+| extend HourOfDay = hourofday(TimeGenerated)
+| summarize TotalConnections = count() by HourOfDay
+| extend AvgConnectionsPerDay = round(TotalConnections / 30.0, 1)
+| project HourOfDay, TotalConnections, AvgConnectionsPerDay
+| order by HourOfDay asc
 ```
 
-  
+#### 4.3 Session Activity Heatmap (Day of Week x Hour)
+
+> Session patterns by day of week and hour for heatmap visualization.
+
+```kusto
+DevCenterConnectionLogs
+| where TimeGenerated > ago(30d)
+| where State == "Connected"
+| extend DayOfWeek = dayofweek(TimeGenerated) / 1d
+| extend DayName = case(
+      DayOfWeek == 0, "Sunday",
+      DayOfWeek == 1, "Monday",
+      DayOfWeek == 2, "Tuesday",
+      DayOfWeek == 3, "Wednesday",
+      DayOfWeek == 4, "Thursday",
+      DayOfWeek == 5, "Friday",
+      DayOfWeek == 6, "Saturday",
+      "Unknown")
+| extend HourOfDay = hourofday(TimeGenerated)
+| summarize SessionCount = count() by DayOfWeek, DayName, HourOfDay
+| order by DayOfWeek asc, HourOfDay asc
+```
 
 ---
 
-  
+### Section 5: Dev Box Activity Tracking
 
-### Integration with Enterprise Monitoring
+#### 5.1 Most Active Dev Boxes (Last 30 Days)
 
-  
+> Dev Boxes ranked by total session hours. Useful for capacity optimization.
 
-#### ServiceNow Integration
+```kusto
+let devBoxOwnership =
+    DevCenterResourceOperationLogs
+    | where OperationName in ("CreateDevBox", "DevBoxStartAction", "Schedule", "DevBoxStopAction")
+    | extend DevBoxName = tostring(split(SubResourceId, "/")[-1])
+    | extend DevBoxUser = tostring(split(SubResourceId, "/")[-3])
+    | extend DevProject = tostring(split(AdditionalProperties.ProjectId, "/")[-1])
+    | where isnotempty(DevBoxName) and isnotempty(DevBoxUser)
+    | summarize arg_max(TimeGenerated, DevBoxUser, DevProject) by DevBoxName;
 
-  
-
-| Integration Point | Configuration |
-| --- | --- |
-| Incident Creation | Webhook from Action Group to ServiceNow API |
-| CMDB Updates | Azure Resource Graph export to ServiceNow |
-| Change Management | Pipeline integration for deployments |
-
-  
-
-#### Splunk/SIEM Integration
-
-  
-
-```bicep
-
-// Export logs to Event Hub for SIEM ingestion
-
-resource eventHubExport 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-
-  name: 'devbox-siem-export'
-
-  scope: devCenter
-
-  properties: {
-
-    eventHubAuthorizationRuleId: eventHubAuthRule.id
-
-    eventHubName: 'devbox-logs'
-
-    logs: [
-
-      { category: 'AuditLogs', enabled: true }
-
-      { category: 'DevCenterDiagnosticLogs', enabled: true }
-
-    ]
-
-  }
-
-}
-
+DevCenterConnectionLogs
+| where TimeGenerated > ago(30d)
+| where State in ("Connected", "Completed")
+| sort by DevBoxName asc, TimeGenerated asc
+| serialize
+| extend NextState = next(State, 1)
+| extend NextTime  = next(TimeGenerated, 1)
+| extend NextBox   = next(DevBoxName, 1)
+| where State == "Connected"
+      and NextState == "Completed"
+      and NextBox == DevBoxName
+| extend SessionMinutes = max_of(0, datetime_diff("minute", NextTime, TimeGenerated))
+| where SessionMinutes > 0 and SessionMinutes < 43200
+| summarize 
+      TotalSessions       = count(),
+      TotalSessionMinutes = sum(SessionMinutes),
+      AvgSessionMinutes   = round(avg(SessionMinutes), 1),
+      LastActive          = max(TimeGenerated),
+      SessionHostName     = any(SessionHostName)
+  by DevBoxName
+| extend TotalSessionHours = round(TotalSessionMinutes / 60.0, 2)
+| extend AvgSessionHours   = round(AvgSessionMinutes / 60.0, 2)
+| join kind=leftouter devBoxOwnership on DevBoxName
+| project DevBoxName, SessionHostName, DevBoxUser, DevProject, TotalSessions,
+          TotalSessionHours, AvgSessionHours, LastActive
+| order by TotalSessionHours desc
 ```
 
-  
+#### 5.2 Inactive Dev Boxes (No Recent Connections)
+
+> Dev Boxes with no connection activity in threshold period (default: **14 days**).
+> Use case: identify unused resources, cleanup candidates.
+
+```kusto
+let threshold_days = 14;
+
+let devBoxOwnership =
+    DevCenterResourceOperationLogs
+    | where OperationName in ("CreateDevBox", "DevBoxStartAction", "Schedule", "DevBoxStopAction")
+    | extend DevBoxName = tostring(split(SubResourceId, "/")[-1])
+    | extend DevBoxUser = tostring(split(SubResourceId, "/")[-3])
+    | extend DevProject = tostring(split(AdditionalProperties.ProjectId, "/")[-1])
+    | where isnotempty(DevBoxName) and isnotempty(DevBoxUser)
+    | summarize arg_max(TimeGenerated, DevBoxUser, DevProject) by DevBoxName;
+
+let allKnownBoxes =
+    DevCenterConnectionLogs
+    | where State == "Connected"
+    | summarize arg_max(TimeGenerated, SessionHostName) by DevBoxName;
+
+allKnownBoxes
+| extend LastConnection = TimeGenerated
+| extend DaysSinceConnection = datetime_diff("day", now(), LastConnection)
+| where DaysSinceConnection >= threshold_days
+| join kind=leftouter devBoxOwnership on DevBoxName
+| project DevBoxName, SessionHostName, DevBoxUser, DevProject, LastConnection, DaysSinceConnection
+| order by DaysSinceConnection desc
+```
+
+#### 5.3 Connection Frequency by Dev Box (Last 30 Days)
+
+> How often each Dev Box is connected per day. Identifies daily vs occasional users.
+
+```kusto
+let devBoxOwnership =
+    DevCenterResourceOperationLogs
+    | where OperationName in ("CreateDevBox", "DevBoxStartAction", "Schedule", "DevBoxStopAction")
+    | extend DevBoxName = tostring(split(SubResourceId, "/")[-1])
+    | extend DevBoxUser = tostring(split(SubResourceId, "/")[-3])
+    | extend DevProject = tostring(split(AdditionalProperties.ProjectId, "/")[-1])
+    | where isnotempty(DevBoxName) and isnotempty(DevBoxUser)
+    | summarize arg_max(TimeGenerated, DevBoxUser, DevProject) by DevBoxName;
+
+DevCenterConnectionLogs
+| where TimeGenerated > ago(30d)
+| where State == "Connected"
+| extend Date = startofday(TimeGenerated)
+| summarize 
+      ConnectionsPerDay = count(),
+      SessionHostName   = any(SessionHostName)
+  by DevBoxName, Date
+| summarize 
+      TotalConnections     = sum(ConnectionsPerDay),
+      DaysActive           = count(),
+      AvgConnectionsPerDay = round(avg(ConnectionsPerDay), 1),
+      SessionHostName      = any(SessionHostName)
+  by DevBoxName
+| join kind=leftouter devBoxOwnership on DevBoxName
+| project DevBoxName, SessionHostName, DevBoxUser, DevProject, TotalConnections, DaysActive, AvgConnectionsPerDay
+| order by TotalConnections desc
+```
 
 * * *
 
