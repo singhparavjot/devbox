@@ -1753,9 +1753,11 @@ Get-ChildItem "C:\ProgramData\Microsoft\DevBox\Agent" -Recurse
 
 - Check if all the network requirements are met for dev box - refer - [Network requirements for Windows 365 | Microsoft Learn](https://learn.microsoft.com/en-us/windows-365/enterprise/requirements-network?tabs=enterprise%2Cent#windows-365-service) and [Understanding the IP address of your IoT hub | Microsoft Learn](https://learn.microsoft.com/en-us/azure/iot-hub/iot-hub-understand-ip-address)
 - Once network connection is green check if Dev Box Agent service is running and 2 applications are running on Dev Box. 
-<br> ![==image_0==.png](/.attachments/==image_0==-96528e80-288d-46b3-a705-ec15ab3616b2.png) 
+<br> <img width="703" height="66" alt="image" src="https://github.com/user-attachments/assets/b6368e6e-606a-49e5-9fc2-14282a3ad7fe" />
+
 <br>
-![==image_0==.png](/.attachments/==image_0==-ead3b454-cced-4007-bd2e-eec5a1faf165.png) 
+<img width="1236" height="428" alt="image" src="https://github.com/user-attachments/assets/c15f3c85-fb78-4a5e-9cf3-14f26e5cd4b5" />
+
 
 
 
@@ -1796,6 +1798,7 @@ This IP is delivered with:
 | 🔧 GitHub Actions | CI/CD workflows with OIDC authentication |
 | 📋 Parameter Files | Production-ready configuration templates |
 | 📖 Documentation | This wiki + README.md |
+![Uploading image.png…]()
 
 * * *
  **GitHub Repository** --> [HERE](https://github.com/parasingh_microsoft/devbox-bicep)
