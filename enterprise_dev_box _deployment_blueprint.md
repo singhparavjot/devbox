@@ -43,7 +43,7 @@ The blueprint enables organizations to move away from ad‑hoc end‑user comput
 ### Architecture Diagram
 
 
-::: mermaid
+``` mermaid
 
 
 graph TB
@@ -149,7 +149,7 @@ graph TB
     style ProjSCUS2 fill:#fff,stroke:#333
 
     style ProjSCUS3 fill:#fff,stroke:#333
-:::
+```
 ### Core Components
 
 | Component | Description |
@@ -205,7 +205,7 @@ This architecture supports both centralized governance and decentralized team ow
 
 ### Module Dependency Diagram
 
-::: mermaid
+``` mermaid
 flowchart TD
     MAIN["main.bicep (Subscription Scope)"] --> DC["devCenter.bicep"]
     MAIN --> NS["networkSetup.bicep"]
@@ -229,7 +229,7 @@ flowchart TD
     style MAIN fill:#0078D4,color:#fff
     style DC fill:#68217A,color:#fff
     style PFD fill:#107C10,color:#fff
-:::
+```
 
 
 ### Module Descriptions
@@ -399,7 +399,7 @@ Each pool supports per-pool customization:
     
 
 ### Reference Topology
-::: mermaid
+``` mermaid
 
 graph TB
 
@@ -441,7 +441,7 @@ graph TB
 
     style FW fill:#E74C3C,color:#fff
 
-:::
+```
 * * *
 
 <div style="background-color:#0078D4; color:white; padding:10px; border-radius:5px; margin:10px 0;">
@@ -454,7 +454,7 @@ graph TB
 
 ### Deployment Flow
 
-::: mermaid  
+``` mermaid  
 sequenceDiagram  
 participant User  
 participant GitHub  
@@ -473,7 +473,7 @@ participant Azure
     GitHub-->>User: Pipeline Complete
     
 
-:::
+```
 
 ### Local Deployment
 
@@ -700,7 +700,7 @@ The Dev Box platform implements a **defense-in-depth** security model across fou
 - **Alerting**: Proactive notifications for failures, capacity issues, and anomalies
 
 - **Audit Trails**: Immutable record of administrative actions for compliance
-::: mermaid
+``` mermaid
 flowchart LR
     SC[Security Controls]
 
@@ -728,7 +728,7 @@ flowchart LR
     MO --> MO2[Diagnostic Logs]
     MO --> MO3[Alerting]
     MO --> MO4[Audit Trails]
-:::
+```
 
 
 * * *
@@ -799,7 +799,7 @@ Projects use **IANA timezone format** for auto-stop schedules.
 ---------------------------
  
 
-::: mermaid
+``` mermaid
 
 flowchart TB
 
@@ -903,7 +903,7 @@ flowchart TB
 
     style DASH fill:#107C10,color:#fff
 
-:::
+```
 
   
 
@@ -1608,7 +1608,7 @@ resource eventHubExport 'Microsoft.Insights/diagnosticSettings@2021-05-01-previe
 
 -----------------------------
 
-::: mermaid  
+``` mermaid  
 gantt  
 title Dev Box Deployment Lifecycle  
 dateFormat YYYY-MM-DD  
@@ -1626,7 +1626,7 @@ Enable Conditional Access :c1, after b4, 3d
 Provision users :c2, after c1, 5d  
 section Phase 4 - Operate  
 Monitor & tune :d1, after c2, 30d  
-:::
+```
 
 ### Lifecycle Phases
 
