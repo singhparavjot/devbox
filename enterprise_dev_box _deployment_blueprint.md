@@ -794,6 +794,114 @@ Projects use **IANA timezone format** for auto-stop schedules.
 
 <h3 style="margin:0; color:white;">12. Monitoring & Operations — Session Analytics</h3>
 
+
+``` mermaid
+
+flowchart TB
+
+    subgraph Sources["Data Sources"]
+
+        DC["Dev Center"]
+
+        PROJ["Projects"]
+
+        POOL["Dev Box Pools"]
+
+        NC["Network Connections"]
+
+    end
+
+  
+
+    subgraph Collection["Data Collection"]
+
+        DIAG["Diagnostic Settings"]
+
+        LOGS["Azure Monitor Logs"]
+
+        METRICS["Platform Metrics"]
+
+    end
+
+  
+
+    subgraph Analysis["Analysis & Alerting"]
+
+        LAW["Log Analytics Workspace"]
+
+        ALERTS["Azure Alerts"]
+
+        DASH["Azure Dashboards"]
+
+        WB["Azure Workbooks"]
+
+    end
+
+  
+
+    subgraph Actions["Response Actions"]
+
+        AG["Action Groups"]
+
+        EMAIL["Email Notifications"]
+
+        WEBHOOK["Webhooks/Logic Apps"]
+
+        ITSM["ITSM Integration"]
+
+    end
+
+  
+
+    DC --> DIAG
+
+    PROJ --> DIAG
+
+    POOL --> DIAG
+
+    NC --> DIAG
+
+  
+
+    DIAG --> LOGS
+
+    DIAG --> METRICS
+
+  
+
+    LOGS --> LAW
+
+    METRICS --> LAW
+
+  
+
+    LAW --> ALERTS
+
+    LAW --> DASH
+
+    LAW --> WB
+
+  
+
+    ALERTS --> AG
+
+    AG --> EMAIL
+
+    AG --> WEBHOOK
+
+    AG --> ITSM
+
+  
+
+    style LAW fill:#0078D4,color:#fff
+
+    style ALERTS fill:#E74C3C,color:#fff
+
+    style DASH fill:#107C10,color:#fff
+
+```
+
+
 </div>
 
 ---------------------------
