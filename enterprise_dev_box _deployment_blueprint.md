@@ -1798,10 +1798,9 @@ This IP is delivered with:
 | 🔧 GitHub Actions | CI/CD workflows with OIDC authentication |
 | 📋 Parameter Files | Production-ready configuration templates |
 | 📖 Documentation | This wiki + README.md |
-![Uploading image.png…]()
 
-* * *
- **GitHub Repository** --> [HERE](https://github.com/parasingh_microsoft/devbox-bicep)
+
+
 
 API Version
 -----------
